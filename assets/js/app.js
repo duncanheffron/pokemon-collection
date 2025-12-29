@@ -1,6 +1,7 @@
 let allSets = [];
 let collection = {};
 let currentSetId = null;
+let isRendering = false; // Guard to prevent multiple simultaneous renders
 
 // Detect if we're on GitHub Pages (static hosting) or have a server
 // GitHub Pages URLs are typically: username.github.io or *.github.io
@@ -199,8 +200,14 @@ async function loadSetsData() {
     if (response.ok) {
       const sets = await response.json();
       allSets = sets;
-      await renderSetList();
-      await renderSetPage();
+      
+      // Only render the appropriate page based on current URL
+      const isSetPage = window.location.pathname.includes('set.html');
+      if (isSetPage) {
+        await renderSetPage();
+      } else {
+        await renderSetList();
+      }
       return;
     }
   } catch (err) {
@@ -213,8 +220,14 @@ async function loadSetsData() {
     if (apiResponse.ok) {
       const sets = await apiResponse.json();
       allSets = sets;
-      await renderSetList();
-      await renderSetPage();
+      
+      // Only render the appropriate page based on current URL
+      const isSetPage = window.location.pathname.includes('set.html');
+      if (isSetPage) {
+        await renderSetPage();
+      } else {
+        await renderSetList();
+      }
       return;
     }
   } catch (err) {
@@ -327,10 +340,35 @@ function isValidVariantGlobal(card, variant) {
 // Render set list on index page
 async function renderSetList() {
   const list = document.getElementById('set-list');
-  if (!list) return;
+  if (!list) {
+    // Not on index page, don't render
+    return;
+  }
 
-  // Load all collections for progress calculation
-  await loadCollection();
+  // Prevent multiple simultaneous renders
+  if (isRendering) {
+    return;
+  }
+
+  // Wait for sets to be loaded if they haven't been yet
+  if (!allSets || allSets.length === 0) {
+    // Sets not loaded yet, wait a bit and try again (only once)
+    if (!isRendering) {
+      setTimeout(() => renderSetList(), 100);
+    }
+    return;
+  }
+
+  isRendering = true;
+
+  try {
+    // Load all collections for progress calculation
+    try {
+      await loadCollection();
+    } catch (err) {
+      console.error('Error loading collection:', err);
+      // Continue anyway with empty collection
+    }
 
   list.innerHTML = '';
   allSets.forEach(set => {
@@ -398,30 +436,64 @@ async function renderSetList() {
     
     list.appendChild(div);
   });
+  } finally {
+    isRendering = false;
+  }
 }
 
 // Render set page with cards
 async function renderSetPage() {
-  const params = new URLSearchParams(window.location.search);
-  const setId = params.get('set');
-  if (!setId) return;
-
-  const set = allSets.find(s => s.id === setId);
-  if (!set) {
-    document.getElementById('set-name').textContent = 'Set not found';
+  // Check if we're actually on the set page
+  const setNameEl = document.getElementById('set-name');
+  if (!setNameEl) {
+    // Not on set page, don't render
     return;
   }
 
-  // Set current set ID for collection operations
-  currentSetId = setId;
-
-  const setNameEl = document.getElementById('set-name');
-  if (setNameEl) {
-    setNameEl.textContent = set.name;
+  // Prevent multiple simultaneous renders
+  if (isRendering) {
+    return;
   }
 
-  // Reload collection to ensure it's up to date
-  await loadCollection(setId);
+  const params = new URLSearchParams(window.location.search);
+  const setId = params.get('set');
+  if (!setId) {
+    setNameEl.textContent = 'No set specified';
+    return;
+  }
+
+  // Wait for sets to be loaded if they haven't been yet
+  if (!allSets || allSets.length === 0) {
+    // Sets not loaded yet, wait a bit and try again (only once)
+    if (!isRendering) {
+      setTimeout(() => renderSetPage(), 100);
+    }
+    return;
+  }
+
+  isRendering = true;
+
+  try {
+    const set = allSets.find(s => s.id === setId);
+    if (!set) {
+      setNameEl.textContent = 'Set not found';
+      return;
+    }
+
+    // Set current set ID for collection operations
+    currentSetId = setId;
+
+    if (setNameEl) {
+      setNameEl.textContent = set.name;
+    }
+
+    // Reload collection to ensure it's up to date
+    try {
+      await loadCollection(setId);
+    } catch (err) {
+      console.error('Error loading collection:', err);
+      // Continue anyway with empty collection
+    }
 
   // Set logo if available
   const setLogo = document.getElementById('set-logo');
@@ -814,6 +886,9 @@ async function renderSetPage() {
 
   // Initial render
   renderCards();
+  } finally {
+    isRendering = false;
+  }
 }
 
 // Format date for display
