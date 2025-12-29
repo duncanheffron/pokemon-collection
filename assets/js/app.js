@@ -796,11 +796,6 @@ async function renderSetPage() {
   }
 
   function renderCards() {
-    // Prevent rendering if already in progress
-    if (isRendering) {
-      return;
-    }
-    
     const collectionValue = collectionFilter?.value || 'all';
     const typeValue = typeFilter?.value || 'all';
     const variantValue = variantFilter?.value || 'all';
