@@ -204,9 +204,21 @@ async function loadSetsData() {
       // Only render the appropriate page based on current URL
       const isSetPage = window.location.pathname.includes('set.html');
       if (isSetPage) {
-        await renderSetPage();
+        try {
+          await renderSetPage();
+        } catch (err) {
+          console.error('Error rendering set page:', err);
+          const setNameEl = document.getElementById('set-name');
+          if (setNameEl) {
+            setNameEl.textContent = 'Error loading set';
+          }
+        }
       } else {
-        await renderSetList();
+        try {
+          await renderSetList();
+        } catch (err) {
+          console.error('Error rendering set list:', err);
+        }
       }
       return;
     }
@@ -224,9 +236,21 @@ async function loadSetsData() {
       // Only render the appropriate page based on current URL
       const isSetPage = window.location.pathname.includes('set.html');
       if (isSetPage) {
-        await renderSetPage();
+        try {
+          await renderSetPage();
+        } catch (err) {
+          console.error('Error rendering set page:', err);
+          const setNameEl = document.getElementById('set-name');
+          if (setNameEl) {
+            setNameEl.textContent = 'Error loading set';
+          }
+        }
       } else {
-        await renderSetList();
+        try {
+          await renderSetList();
+        } catch (err) {
+          console.error('Error rendering set list:', err);
+        }
       }
       return;
     }
@@ -261,8 +285,29 @@ function showError(message) {
   }
 }
 
+// Global error handler to prevent crashes
+window.addEventListener('error', (event) => {
+  console.error('Global error caught:', event.error);
+  // Prevent default error handling that might cause page reload
+  event.preventDefault();
+  return true;
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
+  // Prevent default error handling
+  event.preventDefault();
+});
+
 // Initialize
-loadSetsData();
+loadSetsData().catch(err => {
+  console.error('Error initializing app:', err);
+  // Show error message to user
+  const errorMsg = document.createElement('div');
+  errorMsg.style.cssText = 'padding: 20px; background: #ff6b6b; color: white; border-radius: 8px; margin: 20px; text-align: center;';
+  errorMsg.textContent = 'Error loading application. Please refresh the page.';
+  document.body.appendChild(errorMsg);
+});
 
 // Shared helper functions for card validation
 function isCardExGlobal(card) {
@@ -352,10 +397,7 @@ async function renderSetList() {
 
   // Wait for sets to be loaded if they haven't been yet
   if (!allSets || allSets.length === 0) {
-    // Sets not loaded yet, wait a bit and try again (only once)
-    if (!isRendering) {
-      setTimeout(() => renderSetList(), 100);
-    }
+    // Sets not loaded yet - don't retry, just wait for loadSetsData to complete
     return;
   }
 
@@ -464,10 +506,8 @@ async function renderSetPage() {
 
   // Wait for sets to be loaded if they haven't been yet
   if (!allSets || allSets.length === 0) {
-    // Sets not loaded yet, wait a bit and try again (only once)
-    if (!isRendering) {
-      setTimeout(() => renderSetPage(), 100);
-    }
+    // Sets not loaded yet - don't retry, just wait for loadSetsData to complete
+    setNameEl.textContent = 'Loading...';
     return;
   }
 
@@ -477,6 +517,7 @@ async function renderSetPage() {
     const set = allSets.find(s => s.id === setId);
     if (!set) {
       setNameEl.textContent = 'Set not found';
+      isRendering = false;
       return;
     }
 
@@ -495,30 +536,30 @@ async function renderSetPage() {
       // Continue anyway with empty collection
     }
 
-  // Set logo if available
-  const setLogo = document.getElementById('set-logo');
-  if (setLogo) {
-    // MEGA Dream ex logo
-    if (set.id === 'mega-dream-ex' || set.name === 'MEGA Dream ex') {
-      setLogo.src = 'https://archives.bulbagarden.net/media/upload/thumb/6/65/M2a_MEGA_Dream_ex_Logo.png/360px-M2a_MEGA_Dream_ex_Logo.png';
-      setLogo.style.display = 'block';
-      setLogo.alt = 'MEGA Dream ex Logo';
+    // Set logo if available
+    const setLogo = document.getElementById('set-logo');
+    if (setLogo) {
+      // MEGA Dream ex logo
+      if (set.id === 'mega-dream-ex' || set.name === 'MEGA Dream ex') {
+        setLogo.src = 'https://archives.bulbagarden.net/media/upload/thumb/6/65/M2a_MEGA_Dream_ex_Logo.png/360px-M2a_MEGA_Dream_ex_Logo.png';
+        setLogo.style.display = 'block';
+        setLogo.alt = 'MEGA Dream ex Logo';
+      }
+      // Greninja Collection logo
+      else if (set.id === 'greninja-collection' || set.name === 'Greninja Collection') {
+        setLogo.src = 'https://www.pokemon.com/static-assets/content-assets/cms2/img/pokedex/full/658.png';
+        setLogo.style.display = 'block';
+        setLogo.alt = 'Greninja Logo';
+      }
+      // Miltank Collection logo
+      else if (set.id === 'miltank-collection' || set.name === 'Miltank Collection') {
+        setLogo.src = 'https://marriland.com/wp-content/plugins/marriland-core/images/pokemon/sprites/home/full/miltank.png';
+        setLogo.style.display = 'block';
+        setLogo.alt = 'Miltank Logo';
+      }
     }
-    // Greninja Collection logo
-    else if (set.id === 'greninja-collection' || set.name === 'Greninja Collection') {
-      setLogo.src = 'https://www.pokemon.com/static-assets/content-assets/cms2/img/pokedex/full/658.png';
-      setLogo.style.display = 'block';
-      setLogo.alt = 'Greninja Logo';
-    }
-    // Miltank Collection logo
-    else if (set.id === 'miltank-collection' || set.name === 'Miltank Collection') {
-      setLogo.src = 'https://marriland.com/wp-content/plugins/marriland-core/images/pokemon/sprites/home/full/miltank.png';
-      setLogo.style.display = 'block';
-      setLogo.alt = 'Miltank Logo';
-    }
-  }
 
-  const grid = document.getElementById('card-grid');
+    const grid = document.getElementById('card-grid');
   const collectionFilter = document.getElementById('collectionFilter');
   const typeFilter = document.getElementById('typeFilter');
   const variantFilter = document.getElementById('variantFilter');
