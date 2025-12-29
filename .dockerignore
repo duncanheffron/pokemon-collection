@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+README.md
+.env
+*.log
+data/sets_backup_*.json
+scraped_cards_raw.json
+api_raw.json
+greninja_collection_raw.json
+miltank_collection_raw.json
+manual_variant_overrides.json
+export_collection.html
+*.md
+!README.md
+

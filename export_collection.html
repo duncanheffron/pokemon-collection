@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Export Collection</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: #fff;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    button {
+      background: #6cf;
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #8df;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      background: #222;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 10px;
+      font-family: monospace;
+      margin: 10px 0;
+    }
+    .info {
+      background: #222;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pokémon Collection Exporter</h1>
+  
+  <div class="info">
+    <p><strong>Collection Status:</strong></p>
+    <p id="status">Loading...</p>
+  </div>
+  
+  <button onclick="exportCollection()">Export Collection (JSON)</button>
+  <button onclick="exportCSV()">Export Collection (CSV)</button>
+  <button onclick="clearCollection()">Clear Collection</button>
+  
+  <h2>Exported Data:</h2>
+  <textarea id="output" readonly></textarea>
+  
+  <script>
+    function getCollection() {
+      try {
+        const stored = localStorage.getItem('pokemon_collection');
+        return stored ? JSON.parse(stored) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+    
+    function updateStatus() {
+      const collection = getCollection();
+      const count = Object.values(collection).filter(v => v === true).length;
+      document.getElementById('status').textContent = 
+        `${count} cards collected out of ${Object.keys(collection).length} total entries`;
+    }
+    
+    function exportCollection() {
+      const collection = getCollection();
+      const collected = Object.entries(collection)
+        .filter(([key, value]) => value === true)
+        .map(([key]) => key);
+      
+      const data = {
+        exported: new Date().toISOString(),
+        totalCollected: collected.length,
+        cards: collected
+      };
+      
+      document.getElementById('output').value = JSON.stringify(data, null, 2);
+      
+      // Download as file
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pokemon-collection-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    function exportCSV() {
+      const collection = getCollection();
+      const collected = Object.entries(collection)
+        .filter(([key, value]) => value === true)
+        .map(([key]) => {
+          const parts = key.split('-');
+          return {
+            number: parts[0],
+            name: parts.slice(1, -1).join('-'),
+            variant: parts[parts.length - 1]
+          };
+        });
+      
+      let csv = 'Card Number,Card Name,Variant\n';
+      collected.forEach(card => {
+        csv += `"${card.number}","${card.name}","${card.variant}"\n`;
+      });
+      
+      document.getElementById('output').value = csv;
+      
+      // Download as file
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pokemon-collection-${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    function clearCollection() {
+      if (confirm('Are you sure you want to clear your entire collection? This cannot be undone!')) {
+        localStorage.removeItem('pokemon_collection');
+        updateStatus();
+        document.getElementById('output').value = 'Collection cleared.';
+      }
+    }
+    
+    updateStatus();
+  </script>
+</body>
+</html>
+

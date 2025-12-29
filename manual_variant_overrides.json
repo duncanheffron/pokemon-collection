@@ -1,0 +1,5 @@
+{
+  "overrides": {},
+  "instructions": "Add card numbers and specify which variants they actually have. Set hasBall/hasEnergy to true/false. Leave empty if all variants from scraped data are correct."
+}
+

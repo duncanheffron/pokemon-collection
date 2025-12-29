@@ -1,0 +1,26 @@
+# Environment variables
+.env
+
+# Node modules
+node_modules/
+
+# Scraped data (keep for reference, but can be regenerated)
+scraped_cards_raw.json
+api_raw.json
+
+# Backup files (keep latest 3, auto-cleanup old ones)
+data/sets_backup_*.json
+
+# Logs
+*.log
+scrape_output.log
+
+# Downloaded images (optional - uncomment if you don't want to commit images)
+# images/cards/*.jpg
+
+# Package lock (if using npm)
+package-lock.json
+
+# Collection data (user-specific, should not be committed)
+data/collection.json
+

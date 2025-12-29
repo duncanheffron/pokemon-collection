@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collection</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← Back to sets</a>
+    <div class="set-header">
+      <img id="set-logo" src="" alt="Set Logo" class="set-logo" style="display: none;">
+      <h1 id="set-name"></h1>
+    </div>
+    <div id="completion-stats" class="completion-stats">
+      <div class="completion-info">
+        <span class="completion-label">Collection Progress:</span>
+        <span id="completion-text" class="completion-text">0 / 0 (0%)</span>
+      </div>
+      <div class="progress-bar-container">
+        <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+      </div>
+    </div>
+    <div class="filters">
+      <select id="collectionFilter">
+        <option value="all">All Cards</option>
+        <option value="collected">Collected Only</option>
+        <option value="uncollected">Uncollected Only</option>
+      </select>
+      <select id="typeFilter">
+        <option value="all">All Types</option>
+        <!-- Dynamically populated -->
+      </select>
+      <select id="variantFilter">
+        <option value="all">All Variants</option>
+        <!-- Dynamically populated -->
+      </select>
+      <select id="rarityFilter">
+        <option value="all">All Rarities</option>
+        <!-- Dynamically populated -->
+      </select>
+      <select id="sortBy">
+        <option value="number-desc" selected>Sort by Number (High to Low)</option>
+        <option value="number-asc">Sort by Number (Low to High)</option>
+        <option value="name">Sort by Name</option>
+      </select>
+    </div>
+    <div id="card-grid"></div>
+  </div>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
+

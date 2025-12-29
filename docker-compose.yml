@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  pokemon-collection:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./assets:/app/assets
+      - ./index.html:/app/index.html
+      - ./set.html:/app/set.html
+    environment:
+      - PORT=3000
+    restart: unless-stopped
+
