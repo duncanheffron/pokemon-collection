@@ -444,8 +444,8 @@ async function renderSetList() {
     
     // Get logo URL if available
     let logoHtml = '';
-    if (set.id === 'mega-dream-ex' || set.name === 'MEGA Dream ex') {
-      logoHtml = '<img src="https://archives.bulbagarden.net/media/upload/thumb/6/65/M2a_MEGA_Dream_ex_Logo.png/360px-M2a_MEGA_Dream_ex_Logo.png" alt="MEGA Dream ex Logo" class="set-card-logo">';
+    if (set.id === 'mega-dream-ex' || set.name === 'MEGA Dream ex' || set.name === 'MEGA Dream EX') {
+      logoHtml = '<img src="https://archives.bulbagarden.net/media/upload/thumb/6/65/M2a_MEGA_Dream_ex_Logo.png/360px-M2a_MEGA_Dream_ex_Logo.png" alt="MEGA Dream ex Logo" class="set-card-logo" loading="lazy">';
     }
     else if (set.id === 'greninja-collection' || set.name === 'Greninja Collection') {
       logoHtml = '<img src="https://www.pokemon.com/static-assets/content-assets/cms2/img/pokedex/full/658.png" alt="Greninja Logo" class="set-card-logo">';
@@ -540,7 +540,12 @@ async function renderSetPage() {
     const setLogo = document.getElementById('set-logo');
     if (setLogo) {
       // MEGA Dream ex logo
-      if (set.id === 'mega-dream-ex' || set.name === 'MEGA Dream ex') {
+      if (set.id === 'mega-dream-ex' || set.name === 'MEGA Dream ex' || set.name === 'MEGA Dream EX') {
+        setLogo.loading = 'lazy';
+        setLogo.onerror = function() {
+          // If logo fails to load, just hide it instead of causing errors
+          this.style.display = 'none';
+        };
         setLogo.src = 'https://archives.bulbagarden.net/media/upload/thumb/6/65/M2a_MEGA_Dream_ex_Logo.png/360px-M2a_MEGA_Dream_ex_Logo.png';
         setLogo.style.display = 'block';
         setLogo.alt = 'MEGA Dream ex Logo';
@@ -791,16 +796,31 @@ async function renderSetPage() {
   }
 
   function renderCards() {
+    // Prevent rendering if already in progress
+    if (isRendering) {
+      return;
+    }
+    
     const collectionValue = collectionFilter?.value || 'all';
     const typeValue = typeFilter?.value || 'all';
     const variantValue = variantFilter?.value || 'all';
     const rarityValue = rarityFilter?.value || 'all';
     const sortValue = sortBy?.value || 'number-desc';
 
-    grid.innerHTML = '';
+    // Clear grid safely
+    try {
+      grid.innerHTML = '';
+    } catch (err) {
+      console.error('Error clearing grid:', err);
+      return;
+    }
     
     // Update completion stats
-    updateCompletionStats();
+    try {
+      updateCompletionStats();
+    } catch (err) {
+      console.error('Error updating completion stats:', err);
+    }
 
     // Collect all card-variant combinations
     let cardVariants = [];
@@ -838,71 +858,99 @@ async function renderSetPage() {
 
     // Render cards
     if (cardVariants.length === 0) {
-      grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 40px;">No cards found matching the selected filters.</div>';
+      try {
+        grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 40px;">No cards found matching the selected filters.</div>';
+      } catch (err) {
+        console.error('Error rendering no cards message:', err);
+      }
       return;
     }
 
-    cardVariants.forEach(({ card, variant }) => {
-      const cardId = getCardId(card, variant);
-      const collected = isCollected(cardId);
-      
-      const cardDiv = document.createElement('div');
-      cardDiv.className = `card ${collected ? 'collected' : 'uncollected'}`;
-      cardDiv.dataset.cardId = cardId;
-      
-      // Update image URL to high-res if it's a PriceCharting URL
-      let imageUrl = variant.image;
-      if (imageUrl && imageUrl.includes('storage.googleapis.com/images.pricecharting.com')) {
-        imageUrl = imageUrl.replace(/\/60\.jpg$/, '/1600.jpg');
-      }
-      
-      cardDiv.innerHTML = `
-        <img src="${imageUrl}" alt="${card.name} - ${variant.type}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'180\' height=\'250\'%3E%3Crect fill=\'%231a1a1a\' width=\'180\' height=\'250\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' fill=\'%23444\' font-size=\'14\'%3ENo Image%3C/text%3E%3C/svg%3E'">
-        <div class="card-number">#${card.number}</div>
-        <div class="card-name">${card.name}</div>
-        <div class="variant-type">${variant.type}</div>
-        ${card.rarity ? `<div class="rarity">${card.rarity}</div>` : ''}
-        ${collected ? '<div class="collected-badge">✓ Collected</div>' : ''}
-      `;
-      
-      // Add click handler to toggle collection
-      cardDiv.addEventListener('click', async () => {
-        const isNowCollected = await toggleCollection(cardId);
+    // For large sets (like mega-dream-ex with 250 cards), render in batches to prevent mobile crashes
+    const BATCH_SIZE = 50;
+    let currentIndex = 0;
+
+    function renderBatch() {
+      try {
+        const endIndex = Math.min(currentIndex + BATCH_SIZE, cardVariants.length);
         
-        // Debug logging
-        console.log('Collection toggle:', {
-          cardId,
-          isNowCollected,
-          collectionSize: Object.keys(collection).length
-        });
-        
-        // Update card appearance
-        cardDiv.className = `card ${isNowCollected ? 'collected' : 'uncollected'}`;
-        
-        if (isNowCollected) {
-          if (!cardDiv.querySelector('.collected-badge')) {
-            const badge = document.createElement('div');
-            badge.className = 'collected-badge';
-            badge.textContent = '✓ Collected';
-            cardDiv.appendChild(badge);
+        for (let i = currentIndex; i < endIndex; i++) {
+          const { card, variant } = cardVariants[i];
+          const cardId = getCardId(card, variant);
+          const collected = isCollected(cardId);
+          
+          const cardDiv = document.createElement('div');
+          cardDiv.className = `card ${collected ? 'collected' : 'uncollected'}`;
+          cardDiv.dataset.cardId = cardId;
+          
+          // Update image URL to high-res if it's a PriceCharting URL
+          let imageUrl = variant.image;
+          if (imageUrl && imageUrl.includes('storage.googleapis.com/images.pricecharting.com')) {
+            imageUrl = imageUrl.replace(/\/60\.jpg$/, '/1600.jpg');
           }
-        } else {
-          const badge = cardDiv.querySelector('.collected-badge');
-          if (badge) badge.remove();
+          
+          cardDiv.innerHTML = `
+            <img src="${imageUrl}" alt="${card.name} - ${variant.type}" loading="lazy" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'180\' height=\'250\'%3E%3Crect fill=\'%231a1a1a\' width=\'180\' height=\'250\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' fill=\'%23444\' font-size=\'14\'%3ENo Image%3C/text%3E%3C/svg%3E'">
+            <div class="card-number">#${card.number}</div>
+            <div class="card-name">${card.name}</div>
+            <div class="variant-type">${variant.type}</div>
+            ${card.rarity ? `<div class="rarity">${card.rarity}</div>` : ''}
+            ${collected ? '<div class="collected-badge">✓ Collected</div>' : ''}
+          `;
+          
+          // Add click handler to toggle collection
+          cardDiv.addEventListener('click', async () => {
+            const isNowCollected = await toggleCollection(cardId);
+            
+            // Debug logging
+            console.log('Collection toggle:', {
+              cardId,
+              isNowCollected,
+              collectionSize: Object.keys(collection).length
+            });
+            
+            // Update card appearance
+            cardDiv.className = `card ${isNowCollected ? 'collected' : 'uncollected'}`;
+            
+            if (isNowCollected) {
+              if (!cardDiv.querySelector('.collected-badge')) {
+                const badge = document.createElement('div');
+                badge.className = 'collected-badge';
+                badge.textContent = '✓ Collected';
+                cardDiv.appendChild(badge);
+              }
+            } else {
+              const badge = cardDiv.querySelector('.collected-badge');
+              if (badge) badge.remove();
+            }
+            
+            // Update completion stats
+            updateCompletionStats();
+            
+            // Re-render if collection filter is active
+            const collectionValue = collectionFilter?.value || 'all';
+            if (collectionValue !== 'all') {
+              renderCards();
+            }
+          });
+          
+          grid.appendChild(cardDiv);
         }
         
-        // Update completion stats
-        updateCompletionStats();
+        currentIndex = endIndex;
         
-        // Re-render if collection filter is active
-        const collectionValue = collectionFilter?.value || 'all';
-        if (collectionValue !== 'all') {
-          renderCards();
+        // Continue rendering next batch if there are more cards
+        if (currentIndex < cardVariants.length) {
+          // Use requestAnimationFrame for smooth rendering on mobile
+          requestAnimationFrame(renderBatch);
         }
-      });
-      
-      grid.appendChild(cardDiv);
-    });
+      } catch (err) {
+        console.error('Error rendering card batch:', err);
+      }
+    }
+    
+    // Start rendering first batch
+    renderBatch();
   }
 
   // Populate filters on page load
